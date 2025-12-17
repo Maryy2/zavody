@@ -33,7 +33,7 @@ for user in users:
 
 authenticator = stauth.Authenticate(credentials, "zavody_dashboard", "abcdef", 30)
 
-name, authentication_status, username = authenticator.login("Přihlášení", 'main')
+name, authentication_status, username = authenticator.login("Přihlášení", "main")
 
 current_username = username
 role = db.fetch_role(username=current_username)

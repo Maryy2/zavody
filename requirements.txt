@@ -2,3 +2,4 @@ streamlit
 streamlit-authenticator
 streamlit-option-menu
 supabase
+dotenv

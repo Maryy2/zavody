@@ -36,8 +36,6 @@ def get_user_id(username):
 
     return response.data[0]["id"]
 
-
-
 def fetch_role(username):
     response = (supabase.table("users_db") 
         .select("role") 
@@ -57,13 +55,19 @@ def get_races():
     )
     return response.data
 
-
-def create_race(name, date, location):
+def create_race(name, date, location, db_race_id):
     supabase.table("races").insert({
         "name": name,
         "date": str(date),
-        "location": location
+        "location": location,
+        "race_id": db_race_id
     }).execute()
+
+def delete_race(race_id):
+    supabase.table("races") \
+        .delete() \
+        .eq("id", race_id) \
+        .execute()
 
 def get_race(race_id):
     response = (
@@ -108,8 +112,6 @@ def get_signups_for_position(position_id):
     )
     return response.data
 
-
-
 def remove_signup(signup_id):
     supabase.table("signups").delete().eq("id", signup_id).execute()
 
@@ -153,6 +155,13 @@ def get_all_users_simple():
         .execute()
     return response.data
 
+def get_all_users_stats():
+    response = supabase.table("users_db") \
+        .select("*") \
+        .order("name") \
+        .execute()
+    return response.data
+
 def get_active_races():
     today = date.today().isoformat()
     response = (
@@ -175,3 +184,107 @@ def get_archived_races():
         .execute()
     )
     return response.data
+
+def unsubscribe_user(race_id, user_id):
+    supabase.table("signups") \
+        .delete() \
+        .eq("race_id", race_id) \
+        .eq("user_id", user_id) \
+        .execute()
+    
+def get_user_signup_for_race(race_id, user_id):
+    response = (
+        supabase.table("signups")
+        .select("id, position_id")
+        .eq("race_id", race_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+    if response and response.data:
+        return response.data[0]
+    return None
+
+def get_user_signup_for_race2(race_id, user_id):
+    response = (
+        supabase.table("signups")
+        .select("position_id")
+        .eq("race_id", race_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+
+    if response.data and len(response.data) > 0:
+        return response.data[0]   # vrátí dict
+    return None                  # není přihlášen
+
+def get_occupied_for_race(race_id):
+    response = (
+        supabase.table("signups")
+        .select("id", count="exact")
+        .eq("race_id", race_id)
+        .execute()
+    )
+    return response.count or 0
+
+def get_capacity_for_race(race_id):
+    response = (
+        supabase.table("positions")
+        .select("capacity")
+        .eq("race_id", race_id)
+        .execute()
+    )
+    return sum(p["capacity"] for p in response.data)
+
+def get_user_signup_with_position_name(race_id, user_id):
+    # nejdřív zjistíme signup
+    signup = (
+        supabase.table("signups")
+        .select("position_id")
+        .eq("race_id", race_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+
+    if not signup.data:
+        return None
+
+    position_id = signup.data[0]["position_id"]
+
+    # dotáhneme název pozice
+    position = (
+        supabase.table("positions")
+        .select("name")
+        .eq("id", position_id)
+        .single()
+        .execute()
+    )
+
+    return position.data["name"]
+
+# Uložit poznámku k závodu
+def update_race_notes(race_id, notes):
+    response = (
+        supabase.table("races")
+        .update({"notes": notes})
+        .eq("id", race_id)
+        .execute()
+    )
+    return response
+
+# Načíst poznámku k závodu
+def get_race_notes(race_id):
+    response = (
+        supabase.table("races")
+        .select("notes")
+        .eq("id", race_id)
+        .single()
+        .execute()
+    )
+    return response.data.get("notes") if response.data else ""
+
+
+
+

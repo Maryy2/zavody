@@ -7,7 +7,7 @@ import database as db
 
 #page config
 st.set_page_config(page_title="Závody 2025: Kamera + AK2 + Optika + Start", page_icon="⚙️", layout = "wide")
-st.header("Závody 2025", divider="gray", )
+st.header("Závody 2026", divider="gray", )
 
 if "selected_race" not in st.session_state:
     st.session_state.selected_race = None
@@ -30,7 +30,7 @@ for user in users:
 
 authenticator = stauth.Authenticate(credentials, "zavody_dashboard", "abcdef", 30)
 
-name, authentication_status, username = authenticator.login("Přihlášení", "main")
+name, authentication_status, username = authenticator.login("Přihlášení")
 
 current_username = username
 role = db.fetch_role(username=current_username)

@@ -5,25 +5,98 @@ import streamlit as st
 from datetime import date
 
 load_dotenv(".env")
-SUPABASE_KEY = os.getenv("KEY")
-SUPABASE_URL = os.getenv("URL")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+#SUPABASE_KEY = os.getenv("KEY")
+#SUPABASE_URL = os.getenv("URL")
+
+@st.cache_resource
+def get_supabase():
+    return create_client(os.getenv("URL"), os.getenv("KEY"))
+supabase = get_supabase()
+
+#supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 sb = supabase.table("users_db")
 
-def insert_user(username, name, password):
-    response = supabase.table("users_db").insert({
-    "username": username,
-    "name": name,
-    "password": password
-}).execute()
-    
+# --- READ -> cache_data ---
+@st.cache_data(ttl=60)
+def get_active_races():
+    today = date.today().isoformat()
+    return (
+        supabase.table("races")
+        .select("*")
+        .gte("date", today)
+        .order("date")
+        .execute()
+        .data
+    )
+
+@st.cache_data(ttl=60)
+def get_positions_for_race(race_id: int):
+    return (
+        supabase.table("positions")
+        .select("*")
+        .eq("race_id", race_id)
+        .order("id")
+        .execute()
+        .data
+    )
+
+@st.cache_data(ttl=30)
+def get_race_notes(race_id: int) -> str:
+    response = (
+        supabase.table("races")
+        .select("notes")
+        .eq("id", race_id)
+        .single()
+        .execute()
+    )
+    return response.data["notes"] if response.data else ""
+
+
+@st.cache_data(ttl=60)
 def fetch_all_users():
-    response = (supabase.table("users_db")
-    .select("*")
-    .execute()
-)
-    return response.data
+    return (
+        supabase.table("users_db")
+        .select("*")
+        .order("name")
+        .execute()
+        .data
+    )
+
+# --- WRITE -> no cache ---
+def insert_user(username, name, password):
+    supabase.table("users_db").insert({
+        "username": username,
+        "name": name,
+        "password": password
+    }).execute()
+
+    st.cache_data.clear()   # 🔥 DŮLEŽITÉ
+
+def signup_user(race_id, position_id, user_id):
+    supabase.table("signups").insert({
+        "race_id": race_id,
+        "position_id": position_id,
+        "user_id": user_id
+    }).execute()
+
+    st.cache_data.clear()  # 🔥 DŮLEŽITÉ
+
+# --- Zbytek ---
+
+#def insert_user(username, name, password):
+#    response = supabase.table("users_db").insert({
+#    "username": username,
+#    "name": name,
+#    "password": password
+#}).execute()
+    
+#def fetch_all_users():
+#    response = (supabase.table("users_db")
+#    .select("*")
+#    .execute()
+#)
+#    return response.data
 
 def get_user_id(username):
 
@@ -79,14 +152,14 @@ def get_race(race_id):
     )
     return response.data
 
-def get_positions_for_race(race_id):
-    response = (
-        supabase.table("positions")
-        .select("id, name, capacity")
-        .eq("race_id", race_id)
-        .execute()
-    )
-    return response.data
+#def get_positions_for_race(race_id):
+#    response = (
+#        supabase.table("positions")
+#        .select("id, name, capacity")
+#        .eq("race_id", race_id)
+#        .execute()
+#    )
+#    return response.data
 
 def create_position(race_id, name, capacity):
     supabase.table("positions").insert({
@@ -95,13 +168,12 @@ def create_position(race_id, name, capacity):
         "capacity": capacity
     }).execute()
 
-def signup_user(race_id, position_id, user_id):
-    supabase.table("signups").insert({
-        "race_id": race_id,
-        "position_id": position_id,
-        "user_id": user_id
-    }).execute()
-
+#def signup_user(race_id, position_id, user_id):
+#    supabase.table("signups").insert({
+#        "race_id": race_id,
+#        "position_id": position_id,
+#        "user_id": user_id
+#    }).execute()
 
 def get_signups_for_position(position_id):
     response = (
@@ -162,16 +234,16 @@ def get_all_users_stats():
         .execute()
     return response.data
 
-def get_active_races():
-    today = date.today().isoformat()
-    response = (
-        supabase.table("races")
-        .select("*")
-        .gte("date", today)   # >= DNES
-        .order("date")
-        .execute()
-    )
-    return response.data
+#def get_active_races():
+#    today = date.today().isoformat()
+#    response = (
+#        supabase.table("races")
+#        .select("*")
+#        .gte("date", today)   # >= DNES
+#        .order("date")
+#        .execute()
+#    )
+#    return response.data
 
 
 def get_archived_races():
@@ -275,16 +347,15 @@ def update_race_notes(race_id, notes):
     return response
 
 # Načíst poznámku k závodu
-def get_race_notes(race_id):
-    response = (
-        supabase.table("races")
-        .select("notes")
-        .eq("id", race_id)
-        .single()
-        .execute()
-    )
-    return response.data.get("notes") if response.data else ""
-
+#def get_race_notes(race_id):
+#    response = (
+#        supabase.table("races")
+#        .select("notes")
+#        .eq("id", race_id)
+#        .single()
+#        .execute()
+#    )
+#    return response.data.get("notes") if response.data else ""
 
 
 
